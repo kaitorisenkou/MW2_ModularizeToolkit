@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35828.75 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MW2_ModularizeToolkit", "MW2_ModularizeToolkit\MW2_ModularizeToolkit.csproj", "{FE5EAA9E-F629-4368-97A4-DC0CD186768C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FE5EAA9E-F629-4368-97A4-DC0CD186768C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE5EAA9E-F629-4368-97A4-DC0CD186768C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE5EAA9E-F629-4368-97A4-DC0CD186768C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE5EAA9E-F629-4368-97A4-DC0CD186768C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C2DD664C-E8A7-439A-BC19-CE3BC4B01866}
+	EndGlobalSection
+EndGlobal
