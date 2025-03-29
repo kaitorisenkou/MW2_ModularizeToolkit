@@ -3,10 +3,11 @@ using System;
 using System.Linq;
 using UnityEngine;
 using Verse;
+using static ModularWeapons2.MWCameraRenderer;
 
 namespace MW2_ModularizeToolkit {
     public class MW2MTK_CameraRenderer : MonoBehaviour {
-        public static void Render(RenderTexture renderTexture, params MW2MTKCameraRequest[] requests) {
+        /*public static void Render(RenderTexture renderTexture, params MWCameraRequest[] requests) {
             float orthographicSize = camera.orthographicSize;
             cameraRenderer.requestsInt = requests;
             camera.SetTargetBuffers(renderTexture.colorBuffer, renderTexture.depthBuffer);
@@ -14,13 +15,17 @@ namespace MW2_ModularizeToolkit {
             cameraRenderer.requestsInt = null;
             camera.orthographicSize = orthographicSize;
             camera.targetTexture = null;
-        }
-        MW2MTKCameraRequest[] requestsInt = null;
+        }*/
+        public static void Render(RenderTexture renderTexture, params MWCameraRequest[] requests) 
+            => MWCameraRenderer.Render(renderTexture, requests);
+        MWCameraRequest[] requestsInt = null;
         public void OnPostRender() {
             foreach (var i in requestsInt.OrderBy(t => t.layerOrder)) {
                 var matrix = new Matrix4x4();
-                matrix.SetTRS(i.offset, Quaternion.identity, Vector3.one);
-                GenDraw.DrawMeshNowOrLater(MeshMakerPlanes.NewPlaneMesh(1f, false), Quaternion.Euler(90, 0, 0) * i.offset, Quaternion.identity, i.material, true);
+                //matrix.SetTRS(i.offset, Quaternion.identity, Vector3.one);
+                //GenDraw.DrawMeshNowOrLater(MeshMakerPlanes.NewPlaneMesh(1f, false), Quaternion.Euler(90, 0, 0) * i.offset, Quaternion.identity, i.material, true);
+                matrix.SetTRS(i.offset, i.rotation, i.scale);
+                GenDraw.DrawMeshNowOrLater(i.mesh, matrix, i.material, true);
             }
         }
 
@@ -48,6 +53,7 @@ namespace MW2_ModularizeToolkit {
             return component;
         }
     }
+    /*
     public struct MW2MTKCameraRequest {
         public Material material;
         public Vector2 offset;
@@ -58,4 +64,5 @@ namespace MW2_ModularizeToolkit {
             this.layerOrder = layerOrder;
         }
     }
+    */
 }

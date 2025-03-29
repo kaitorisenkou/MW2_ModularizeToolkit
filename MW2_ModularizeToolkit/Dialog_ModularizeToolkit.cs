@@ -18,6 +18,7 @@ using static UnityEngine.Random;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using static ModularWeapons2.MWCameraRenderer;
 
 
 namespace MW2_ModularizeToolkit {
@@ -127,29 +128,32 @@ namespace MW2_ModularizeToolkit {
             }
         }
 
-        IEnumerable<MW2MTKCameraRequest> GetCameraRequests() {
-            yield return new MW2MTKCameraRequest(targetWeaponDef.graphic.MatSingle, Vector2.zero, 0);
+        IEnumerable<MWCameraRequest> GetCameraRequests() {
+            yield return new MWCameraRequest(targetWeaponDef.graphic.MatSingle, Vector2.zero, 0);
             foreach(var i in adapters) {
                 var adapter = i;
                 var offset = i.offset;
+                var scale = i.scale;
                 if (i.adapterGraphic != null) {
-                    yield return new MW2MTKCameraRequest(i.adapterGraphic.Graphic.MatSingle, i.offset, i.layerOrder);
+                    yield return new MWCameraRequest(i.adapterGraphic.Graphic.MatSingle, i.offset, i.layerOrder,scale);
                 }
                 if (timeSpan>=600 && !i.mountDef.canAdaptAs.NullOrEmpty()) {
                     adapter = adapter.mountDef.canAdaptAs.Last();
                     offset += adapter.offset;
+                    scale *= adapter.scale;
                     if (adapter.adapterGraphic != null) {
-                        yield return new MW2MTKCameraRequest(adapter.adapterGraphic.Graphic.MatSingle, offset, i.layerOrder);
+                        yield return new MWCameraRequest(adapter.adapterGraphic.Graphic.MatSingle, offset, i.layerOrder, scale);
                     }
                 }
                 ModularPartsDef part = DefDatabase<ModularPartsDef>.AllDefsListForReading.Where(t => t.attachedTo == adapter.mountDef).RandomElement();
                 while (part == null && !adapter.mountDef.canAdaptAs.NullOrEmpty()) {
                     adapter = adapter.mountDef.canAdaptAs.First();
                     offset += adapter.offset;
+                    scale *= adapter.scale;
                     part = DefDatabase<ModularPartsDef>.AllDefsListForReading.FirstOrFallback(t => t.attachedTo == adapter.mountDef);
                 }
                 if (part != null) {
-                    yield return new MW2MTKCameraRequest(part.graphicData.Graphic.MatSingle, offset, i.layerOrder);
+                    yield return new MWCameraRequest(part.graphicData.Graphic.MatSingle, offset, i.layerOrder, scale);
                 }
             }
         }
@@ -291,6 +295,114 @@ namespace MW2_ModularizeToolkit {
             leftPart = lineRect.LeftPart(0.325f);
             rightPart = lineRect.RightPart(0.625f);
             Text.Anchor = TextAnchor.MiddleLeft;
+            Widgets.Label(leftPart, "MW2MTK_Scale_X".Translate());
+            Text.Anchor = TextAnchor.MiddleCenter;
+            Widgets.Label(rightPart, adapter.scale.x.ToString());
+            offsetButtonRect = rightPart.LeftPartPixels(32);
+            offsetButtonRect.height /= 1.5f;
+            offsetButtonRect.y += offsetButtonRect.height / 4f;
+            if (Widgets.ButtonText(offsetButtonRect, "-1")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.x -= 1;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x += offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.25")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.x -= 0.25f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x += offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.01")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.x -= 0.01f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect = rightPart.RightPartPixels(32);
+            offsetButtonRect.height /= 1.5f;
+            offsetButtonRect.y += offsetButtonRect.height / 4f;
+            if (Widgets.ButtonText(offsetButtonRect, "+1")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.x += 1;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x -= offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.25")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.x += 0.25f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x -= offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.01")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.x += 0.01f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+
+            lineRect = listing.GetRect(lineHeight);
+            leftPart = lineRect.LeftPart(0.325f);
+            rightPart = lineRect.RightPart(0.625f);
+            Text.Anchor = TextAnchor.MiddleLeft;
+            Widgets.Label(leftPart, "MW2MTK_Scale_Y".Translate());
+            Text.Anchor = TextAnchor.MiddleCenter;
+            Widgets.Label(rightPart, adapter.scale.y.ToString());
+            offsetButtonRect = rightPart.LeftPartPixels(32);
+            offsetButtonRect.height /= 1.5f;
+            offsetButtonRect.y += offsetButtonRect.height / 4f;
+            if (Widgets.ButtonText(offsetButtonRect, "-1")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.y -= 1;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x += offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.25")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.y -= 0.25f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x += offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.01")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.y -= 0.01f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect = rightPart.RightPartPixels(32);
+            offsetButtonRect.height /= 1.5f;
+            offsetButtonRect.y += offsetButtonRect.height / 4f;
+            if (Widgets.ButtonText(offsetButtonRect, "+1")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.y += 1;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x -= offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.25")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.y += 0.25f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x -= offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "0.01")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.scale.y += 0.01f;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+
+            lineRect = listing.GetRect(lineHeight);
+            leftPart = lineRect.LeftPart(0.325f);
+            rightPart = lineRect.RightPart(0.625f);
+            Text.Anchor = TextAnchor.MiddleLeft;
             Widgets.Label(leftPart, "MW2MTK_LayerOrder".Translate());
             Text.Anchor = TextAnchor.MiddleCenter;
             Widgets.Label(rightPart, adapter.layerOrder.ToString());
@@ -391,6 +503,7 @@ namespace MW2_ModularizeToolkit {
                 sb_partsMounts.AppendLine("          <li>");
                 sb_partsMounts.AppendLine($"            <mountDef>{i.mountDef.defName}</mountDef>");
                 sb_partsMounts.AppendLine($"            <offset>({i.offset.x}, {i.offset.y})</offset>");
+                sb_partsMounts.AppendLine($"            <scale>({i.scale.x}, {i.scale.y})</scale>");
                 sb_partsMounts.AppendLine($"            <layerOrder>{i.layerOrder}</layerOrder>");
                 if (i.adapterGraphic != null) {
                     sb_partsMounts.AppendLine("            <adapterGraphic>");
