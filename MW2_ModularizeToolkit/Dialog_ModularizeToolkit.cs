@@ -29,13 +29,25 @@ namespace MW2_ModularizeToolkit {
             }
         }
         public Dialog_ModularizeToolkit(CompEquippable weapon) {
-            targetWeaponDef = weapon.parent.def;
-            drawSize = targetWeaponDef.graphic.drawSize.x * 2;
-            adapters = new List<MountAdapterClass>();
-            oneDot = (1f / targetWeaponDef.graphic.MatSingle.mainTexture.width);
+            Initialize(weapon.parent.def, weapon.parent.StyleDef, compMW: weapon.parent.TryGetComp<CompModularWeapon>());
+        }
+        void Initialize(ThingDef weaponDef, ThingStyleDef styleDef, bool resetAdapters = true, CompModularWeapon compMW=null) {
+            this.styleDef = styleDef;
+            this.targetWeaponDef = weaponDef;
+            this.drawSize = WeaponDefGraphic.drawSize.x * 2;
+            this.oneDot = (1f / WeaponDefGraphic.MatSingle.mainTexture.width);
+
+            if (compMW!=null) {
+                this.adapters = ((CompProperties_ModularWeapon)compMW.props).partsMounts.Select(t=>new MountAdapterClass(t)).ToList();
+            } else {
+                this.adapters = new List<MountAdapterClass>();
+            }
         }
 
         ThingDef targetWeaponDef;
+        ThingStyleDef styleDef = null;
+        Graphic WeaponDefGraphic => styleDef?.Graphic ?? targetWeaponDef.graphic;
+        GraphicData WeaponDefGraphicData => styleDef?.graphicData ?? targetWeaponDef.graphicData;
         float drawSize = 1f;
         List<MountAdapterClass> adapters = new List<MountAdapterClass>();
         int selectIndex = -1;
@@ -86,7 +98,7 @@ namespace MW2_ModularizeToolkit {
         void DoContentsLeftPart(Rect rect) {
             Widgets.DrawBox(rect);
             if (renderTexture == null) {
-                Texture rawTexture = targetWeaponDef.graphic.MatSingle.mainTexture;
+                Texture rawTexture = WeaponDefGraphic.MatSingle.mainTexture;
                 renderTexture = new RenderTexture(rawTexture.width * 2, rawTexture.height * 2, 32, RenderTextureFormat.ARGB32);
                 MW2MTK_CameraRenderer.Render(renderTexture, GetCameraRequests().ToArray());
             }
@@ -129,20 +141,22 @@ namespace MW2_ModularizeToolkit {
         }
 
         IEnumerable<MWCameraRequest> GetCameraRequests() {
-            yield return new MWCameraRequest(targetWeaponDef.graphic.MatSingle, Vector2.zero, 0);
+            yield return new MWCameraRequest(WeaponDefGraphic.MatSingle, Vector2.zero, 0);
             foreach(var i in adapters) {
                 var adapter = i;
                 var offset = i.offset;
                 var scale = i.scale;
+                var rotation = i.rotation;
                 if (i.adapterGraphic != null) {
-                    yield return new MWCameraRequest(i.adapterGraphic.Graphic.MatSingle, i.offset, i.layerOrder,scale);
+                    yield return new MWCameraRequest(i.adapterGraphic.Graphic.MatSingle, i.offset, i.layerOrder, scale, rotation);
                 }
                 if (timeSpan>=600 && !i.mountDef.canAdaptAs.NullOrEmpty()) {
                     adapter = adapter.mountDef.canAdaptAs.Last();
                     offset += adapter.offset;
                     scale *= adapter.scale;
+                    rotation += adapter.rotation;
                     if (adapter.adapterGraphic != null) {
-                        yield return new MWCameraRequest(adapter.adapterGraphic.Graphic.MatSingle, offset, i.layerOrder, scale);
+                        yield return new MWCameraRequest(adapter.adapterGraphic.Graphic.MatSingle, offset, i.layerOrder, scale, rotation);
                     }
                 }
                 ModularPartsDef part = DefDatabase<ModularPartsDef>.AllDefsListForReading.Where(t => t.attachedTo == adapter.mountDef).RandomElement();
@@ -150,25 +164,39 @@ namespace MW2_ModularizeToolkit {
                     adapter = adapter.mountDef.canAdaptAs.First();
                     offset += adapter.offset;
                     scale *= adapter.scale;
+                    rotation += adapter.rotation;
                     part = DefDatabase<ModularPartsDef>.AllDefsListForReading.FirstOrFallback(t => t.attachedTo == adapter.mountDef);
                 }
                 if (part != null) {
-                    yield return new MWCameraRequest(part.graphicData.Graphic.MatSingle, offset, i.layerOrder, scale);
+                    yield return new MWCameraRequest(part.graphicData.Graphic.MatSingle, offset, i.layerOrder, scale, rotation);
                 }
             }
         }
 
         void DoContentsRightPart(Rect rect) {
             Widgets.DrawBox(rect);
+            Text.Font = GameFont.Small;
+            Text.Anchor = TextAnchor.MiddleLeft;
+            float lineHeight = Text.LineHeightOf(GameFont.Small) * 2f;
             rect = rect.ContractedBy(4f);
             if (selectIndex <0) {
+                var rect_styleChoice = rect.TopPartPixels(lineHeight);
+                var rectLeftPart_styleChoice= rect_styleChoice.LeftPart(0.325f);
+                var rectRightPart_styleChoice = rect_styleChoice.RightPart(0.625f);
+                var rectRightPart_styleChoiceLabel = new Rect(rectRightPart_styleChoice) { xMin = rectRightPart_styleChoice.x + 36 };
+                Widgets.Label(rectLeftPart_styleChoice, "MW2MTK_StyleDef".Translate());
+                Widgets.Dropdown(
+                    rectRightPart_styleChoice.LeftPartPixels(32),
+                    targetWeaponDef,
+                    _ => styleDef,
+                    MenuGenerator_ThingStyleDef,
+                    "..."
+                    );
+                Widgets.Label(rectRightPart_styleChoiceLabel, styleDef?.defName ?? "null");
                 return;
             }
             var adapter = adapters[selectIndex];
-            Text.Font = GameFont.Small;
-            Text.Anchor = TextAnchor.MiddleLeft;
             Listing_Standard listing = new Listing_Standard();
-            float lineHeight = Text.LineHeightOf(GameFont.Small) * 2f;
             listing.Begin(rect);
             var lineRect = listing.GetRect(lineHeight);
             var leftPart = lineRect.LeftPart(0.325f);
@@ -403,6 +431,60 @@ namespace MW2_ModularizeToolkit {
             leftPart = lineRect.LeftPart(0.325f);
             rightPart = lineRect.RightPart(0.625f);
             Text.Anchor = TextAnchor.MiddleLeft;
+            Widgets.Label(leftPart, "MW2MTK_Rotation".Translate());
+            Text.Anchor = TextAnchor.MiddleCenter;
+            Widgets.Label(rightPart, adapter.rotation.ToString());
+            offsetButtonRect = rightPart.LeftPartPixels(32);
+            offsetButtonRect.height /= 1.5f;
+            offsetButtonRect.y += offsetButtonRect.height / 4f;
+            if (Widgets.ButtonText(offsetButtonRect, "-15")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.rotation -= 15;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x += offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "5")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.rotation -= 5;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x += offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "1")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.rotation -= 1;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect = rightPart.RightPartPixels(32);
+            offsetButtonRect.height /= 1.5f;
+            offsetButtonRect.y += offsetButtonRect.height / 4f;
+            if (Widgets.ButtonText(offsetButtonRect, "+15")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.rotation += 15;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x -= offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "5")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.rotation += 5;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+            offsetButtonRect.x -= offsetButtonRect.width;
+            if (Widgets.ButtonText(offsetButtonRect, "1")) {
+                SoundDefOf.Click.PlayOneShotOnCamera();
+                adapter.rotation += 1;
+                adapter.SetParentAdapter(null);
+                renderTexture = null;
+            }
+
+            lineRect = listing.GetRect(lineHeight);
+            leftPart = lineRect.LeftPart(0.325f);
+            rightPart = lineRect.RightPart(0.625f);
+            Text.Anchor = TextAnchor.MiddleLeft;
             Widgets.Label(leftPart, "MW2MTK_LayerOrder".Translate());
             Text.Anchor = TextAnchor.MiddleCenter;
             Widgets.Label(rightPart, adapter.layerOrder.ToString());
@@ -481,6 +563,27 @@ namespace MW2_ModularizeToolkit {
                 };
             }
         }
+        IEnumerable<Widgets.DropdownMenuElement<ThingStyleDef>> MenuGenerator_ThingStyleDef(ThingDef targ) {
+            yield return new Widgets.DropdownMenuElement<ThingStyleDef> {
+                option = new FloatMenuOption("Standard", () => {
+                    Initialize(targ, null, false); 
+                    renderTexture = null;
+                }),
+                payload = null
+            };
+            foreach (var i in DefDatabase<StyleCategoryDef>.AllDefsListForReading) {
+                var style = i.GetStyleForThingDef(targ);
+                if (style != null) {
+                    yield return new Widgets.DropdownMenuElement<ThingStyleDef> { 
+                        option = new FloatMenuOption(i.label, () => {
+                            Initialize(targ, style, false); 
+                            renderTexture = null;
+                        }), 
+                        payload = style
+                    };
+                }
+            }
+        }
 
         void DoContentsBottomPart(Rect rect) {
             if (Widgets.ButtonText(rect.RightPart(0.2f).ContractedBy(4f), "MW2MTK_Export".Translate())) {
@@ -491,19 +594,18 @@ namespace MW2_ModularizeToolkit {
         }
 
         void ExportXml() {
-            //{0}
-            var defName = targetWeaponDef.defName;
             //{1}
-            var texPath = targetWeaponDef.graphicData.texPath;
+            string texPath = WeaponDefGraphicData.texPath;
             //{2}
-            var drawSize = targetWeaponDef.graphicData.drawSize.x * 2;
+            float drawSize = WeaponDefGraphicData.drawSize.x * (styleDef != null ? 1 : 2);
             //{3}
-            var sb_partsMounts = new StringBuilder();
+            StringBuilder sb_partsMounts = new StringBuilder();
             foreach (var i in adapters) {
                 sb_partsMounts.AppendLine("          <li>");
                 sb_partsMounts.AppendLine($"            <mountDef>{i.mountDef.defName}</mountDef>");
                 sb_partsMounts.AppendLine($"            <offset>({i.offset.x}, {i.offset.y})</offset>");
                 sb_partsMounts.AppendLine($"            <scale>({i.scale.x}, {i.scale.y})</scale>");
+                sb_partsMounts.AppendLine($"            <rotation>{i.rotation}</rotation>");
                 sb_partsMounts.AppendLine($"            <layerOrder>{i.layerOrder}</layerOrder>");
                 if (i.adapterGraphic != null) {
                     sb_partsMounts.AppendLine("            <adapterGraphic>");
@@ -514,7 +616,19 @@ namespace MW2_ModularizeToolkit {
                 sb_partsMounts.AppendLine("          </li>");
             }
 
-            _ = ExportXmlAsync(MW2MTKMod.Path_templateText, MW2MTKMod.Path_export(targetWeaponDef), defName, texPath, drawSize.ToString(), sb_partsMounts.ToString());
+            if (styleDef == null) {
+                _ = ExportXmlAsync(
+                    MW2MTKMod.Path_templateText, 
+                    MW2MTKMod.Path_export(targetWeaponDef),
+                    targetWeaponDef.defName, texPath, drawSize.ToString(), sb_partsMounts.ToString()
+                    );
+            } else {
+                _ = ExportXmlAsync(
+                    MW2MTKMod.Path_templateTextForStyleDef, 
+                    MW2MTKMod.Path_export(styleDef),
+                    styleDef.defName, texPath, drawSize.ToString(), sb_partsMounts.ToString()
+                    );
+            }
         }
         async Task ExportXmlAsync(string templatePath, string writePath, params string[] formatArgs) {
             using (StreamReader sr = new StreamReader(templatePath, Encoding.UTF8)) {
